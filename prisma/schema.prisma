@@ -1,0 +1,221 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+// prisma/schema.prisma - Add these fields to your Campaign model
+
+model Campaign {
+  id             String   @id @default(cuid())
+  productId      String
+  productTitle   String
+  productImage   String?
+  originalPrice  String
+  campaignMode   String
+  shop           String
+  createdAt      DateTime @default(now())
+
+
+
+   // 🆕 Add this relation at the end of your Campaign model
+  milestones  Milestone[] // A campaign can have many milestones
+  addons      Addon[]     // A campaign can have many addons
+
+  // 🆕 Add this relation at the end
+  backers        Backer[]  // All backers for this campaign
+  subscriptions Subscription[]
+  
+  // 🆕 Optional: Add computed fields
+  totalRaised    Float?    // Sum of all captured payments
+  totalBackers   Int?      // Count of unique backers
+
+  // 🆕 NEW FIELDS for selling plans (only what we need)
+  sellingPlanGroupId  String?  // Shopify's selling plan group ID
+  sellingPlanIds      Json?    // Store array of plan IDs as JSON
+  preOrderType        String?  // "full", "deposit", or "installment"
+
+  // 🆕 NEW FIELDS for auto-capture and invoice
+  fundingPercentage   Float?   @default(0)      // Current funding percentage
+  autoCaptureTriggered Boolean  @default(false) // Has auto-capture been triggered?
+  invoiceSent         Boolean  @default(false)  // Has invoice been sent?
+  capturedAt          DateTime?                  // When campaign reached 100%
+
+   // 🆕 Add this relation at the end with your other relations
+  comments      Comment[]  // A campaign can have many comments
+
+  
+
+  // 🆕 NEW FIELDS - Add these
+  campaignTitle  String?                    // Campaign name/title
+  basePledge     Float?   @default(2.0)     // $2 default pledge amount
+  targetUnits    Int?     @default(100)     // Target 100 units default
+  manualUnits    Int?     @default(0)       // Optional manual units added
+  startDate      DateTime?                   // When campaign starts
+  endDate        DateTime?                   // When campaign ends
+  startTime      String?                     // Start time (e.g., "00:00")
+  endTime        String?                     // End time (e.g., "00:00")
+  timezone       String?  @default("Pakistan/Islamabad")
+  status         String?  @default("draft")  // "draft", "active", "ended"
+  backersCount   Int?     @default(0)        // Number of backers
+  raisedAmount   Float?   @default(0)        // Total money raised
+  
+  @@map("campaigns")
+}
+
+
+model Milestone {
+  id          String   @id @default(cuid())
+  campaignId  String
+  amount      Float
+  title       String
+  description String?
+  imageUrl    String?  // Store Shopify CDN image URL
+  isReached   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+model Addon {
+  id          String   @id @default(cuid())
+  campaignId  String
+  name        String
+  price       Float
+  description String?  // Optional description
+  imageUrl    String?  // Optional image for the addon
+  createdAt   DateTime @default(now())
+  
+  // Relation - connects to Campaign
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  @@map("addons")
+}
+
+model Backer {
+  id             String   @id @default(cuid())
+  campaignId     String
+  orderId        String   @unique // Shopify order ID
+  orderNumber    String?          // Shopify order number (e.g., #1001)
+  customerName   String?
+  customerEmail  String?
+  customerPhone  String?
+  pledgeAmount   Float            // Base pledge amount
+  addonsTotal    Float?   @default(0) // Total of addons selected
+  totalAmount    Float            // pledgeAmount + addonsTotal
+  currency       String   @default("USD")
+  paymentStatus  String   @default("pending") // "pending", "captured", "failed"
+  paymentMethod  String?          // "visa", "mastercard", etc.
+  errorMessage   String?          // If payment failed, why?
+  shopifyOrderJson Json?          // Store full order data for reference
+  createdAt      DateTime @default(now())
+  capturedAt     DateTime?        // When payment was captured
+
+   // 🆕 NEW FIELDS for invoice tracking
+  invoiceSent    Boolean  @default(false)     // Has invoice been sent?
+  invoiceSentAt  DateTime?                     // When invoice was sent
+
+  // 🆕 Naye fields for balance payment
+  remainingAmount      Float?
+  balanceInvoiceSent   Boolean     @default(false)
+  balanceInvoiceSentAt DateTime?
+  balancePaidAt        DateTime?
+  balanceOrderId       String?
+  
+  // Relations
+  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, orderId])
+  @@index([paymentStatus])
+  @@map("backers")
+}
+
+// Add this to your schema.prisma
+
+model Subscription {
+  id                    String   @id @default(cuid())
+  campaignId            String
+  backerId              String?  // Link to original backer if needed
+  shopifySubscriptionId String   @unique
+  shopifyOrderId        String?
+  customerName          String?
+  customerEmail         String?
+  planId                String?  // Selling plan ID
+  amount                Float
+  status                String   @default("active") // active, cancelled, paused, expired
+  currentCycle          Int      @default(1)
+  nextBillingDate       DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  campaign              Campaign @relation(fields: [campaignId], references: [id])
+  
+  @@map("subscriptions")
+}
+
+// prisma/schema.prisma - Add this model
+
+model Comment {
+  id            String   @id @default(cuid())
+  productId     String   // Shopify product ID (gid://shopify/Product/123)
+  productHandle String?  // Product URL handle (optional, for quick access)
+  campaignId    String?  // Optional: link to campaign if comment is for a campaign
+  
+  // Customer info
+  customerName  String?
+  customerEmail String?
+  
+  // Comment content
+  rating        Int      // 1-5 stars
+  comment       String   // The actual comment text
+  title         String?  // Optional comment title
+  
+  // Status and moderation
+  status        String   @default("pending") // pending, approved, rejected, spam
+  isVerifiedPurchase Boolean @default(false) // Verified buyer?
+  
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  approvedAt    DateTime? // When it was approved
+  ipAddress     String?  // For spam prevention
+  
+  // Relations
+  campaign      Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  
+  // Indexes for fast queries
+  @@index([productId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([rating])
+  
+  @@map("comments")
+}

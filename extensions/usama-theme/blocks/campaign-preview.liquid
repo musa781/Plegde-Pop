@@ -1,0 +1,839 @@
+{% comment %}
+  PledgePop Campaign Block - Complete Widget with Progress Bar & Timer
+{% endcomment %}
+
+{% if block.settings.enabled %}
+  {% if product %}
+    <!-- MAIN WIDGET -->
+    {% assign campaign_metafield = product.metafields.pledgepop.campaign %}
+
+    {% if campaign_metafield %}
+      {% assign campaign = campaign_metafield.value %}
+
+      <div class="pledgepop-campaign-wrapper" {{ block.shopify_attributes }}>
+        <div
+          class="pledgepop-campaign"
+          data-product-id="{{ product.id }}"
+          data-campaign-mode="{{ campaign.campaignMode }}"
+        >
+          <!-- Campaign Header with Badge -->
+          <div class="pledgepop-header">
+            <span class="pledgepop-badge pledgepop-badge-{{ campaign.campaignMode }}">
+              {% if campaign.campaignMode == 'pledge' %}
+                ⚡ Pledge Campaign
+              {% else %}
+                🛒 Full Price Campaign
+              {% endif %}
+            </span>
+            <h3 class="pledgepop-title">{{ campaign.campaignTitle | default: product.title }}</h3>
+          </div>
+
+          <!-- Pricing Comparison -->
+          <div class="pledgepop-pricing">
+            <div class="pledgepop-price-box">
+              <span class="pledgepop-label">Regular Price</span>
+              <span class="pledgepop-price-original">{{ product.price | money }}</span>
+            </div>
+            {% if campaign.campaignMode == 'pledge' %}
+              <div class="pledgepop-price-box">
+                <span class="pledgepop-label">Pledge Deposit</span>
+                <span class="pledgepop-price-pledge">{{ campaign.basePledge | money }}</span>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- PROGRESS BAR SECTION (only for pledge mode) -->
+          {% if campaign.campaignMode == 'pledge' %}
+            {% comment %} Calculate progress percentage {% endcomment %}
+            {% assign target = campaign.targetUnits | times: 1.0 %}
+            {% assign raised = campaign.raisedAmount | default: 0 | times: 1.0 %}
+            {% assign base = campaign.basePledge | default: 1 | times: 1.0 %}
+
+            {% if base > 0 and target > 0 %}
+              {% assign progress_raw = raised | divided_by: base %}
+              {% assign progress_percent = progress_raw | divided_by: target | times: 100 %}
+              {% assign progress_rounded = progress_percent | round %}
+            {% else %}
+              {% assign progress_rounded = 0 %}
+            {% endif %}
+
+            <!-- Backers count -->
+            <div class="pledgepop-backers">
+              <span class="pledgepop-backers-count">{{ campaign.backersCount | default: 0 }}</span> backers
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="pledgepop-progress-container">
+              <div class="pledgepop-progress-bar">
+                <div class="pledgepop-progress-fill" style="width: {{ progress_rounded }}%;"></div>
+              </div>
+              <div class="pledgepop-progress-stats">
+                <span>${{ campaign.raisedAmount | default: 0 }} raised</span>
+                <span>{{ progress_rounded }}%</span>
+              </div>
+              <div class="pledgepop-target">Target: {{ campaign.targetUnits }} units</div>
+            </div>
+
+            <!-- MILESTONES SECTION with Images -->
+            {% if campaign.milestones and campaign.milestones.size > 0 %}
+              <div class="pledgepop-milestones">
+                <h4 style="margin: 15px 0 10px 0; font-size: 14px; color: #333;">🏆 Campaign Milestones</h4>
+
+                {% for milestone in campaign.milestones %}
+                  {% assign milestone_amount = milestone.amount | times: 1.0 %}
+                  {% assign is_reached = milestone.isReached %}
+
+                  {% if is_reached %}
+                    {% assign milestone_bg = '#f0fff4' %}
+                    {% assign milestone_border = '#28a745' %}
+                    {% assign border_color = '#28a745' %}
+                    {% assign opacity_value = '1' %}
+                    {% assign milestone_color = '#28a745' %}
+                    {% assign badge_bg = '#28a745' %}
+                    {% assign badge_color = 'white' %}
+                    {% assign badge_text = 'Reached' %}
+                  {% else %}
+                    {% assign milestone_bg = '#f8f9fa' %}
+                    {% assign milestone_border = '#dee2e6' %}
+                    {% assign border_color = '#dee2e6' %}
+                    {% assign opacity_value = '0.7' %}
+                    {% assign milestone_color = '#495057' %}
+                    {% assign badge_bg = '#e9ecef' %}
+                    {% assign badge_color = '#495057' %}
+                    {% assign badge_text = 'Not Reached' %}
+                  {% endif %}
+
+                  <div
+                    class="pledgepop-milestone"
+                    style="
+                      margin-bottom: 15px;
+                      padding: 12px;
+                      background: {{ milestone_bg }};
+                      border: 1px solid {{ milestone_border }};
+                      border-radius: 8px;
+                    "
+                  >
+                    <div style="display: flex; gap: 12px;">
+                      {% if milestone.imageUrl and milestone.imageUrl != '' and milestone.imageUrl != 'null' %}
+                        <div style="width: 60px; height: 60px; flex-shrink: 0;">
+                          <img
+                            src="{{ milestone.imageUrl }}"
+                            alt="{{ milestone.title | escape }}"
+                            width="60"
+                            height="60"
+                            loading="lazy"
+                            style="
+                              width: 100%;
+                              height: 100%;
+                              object-fit: cover;
+                              border-radius: 6px;
+                              border: 2px solid {{ border_color }};
+                              opacity: {{ opacity_value }};
+                              display: block;
+                            "
+                            onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<div style=\'width:60px;height:60px;background:#e9ecef;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;color:#6c757d;\'>{% if is_reached %}✅{% else %}🎯{% endif %}</div>';"
+                          >
+                        </div>
+                      {% else %}
+                        <div
+                          style="
+                            width: 60px;
+                            height: 60px;
+                            background: #e9ecef;
+                            border-radius: 6px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 24px;
+                            color: #6c757d;
+                            flex-shrink: 0;
+                          "
+                        >
+                          {% if is_reached %}✅{% else %}🎯{% endif %}
+                        </div>
+                      {% endif %}
+
+                      <!-- Milestone Details -->
+                      <div style="flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                          <span style="font-weight: bold; color: {{ milestone_color }};">
+                            ${{ milestone.amount }} - {{ milestone.title }}
+                          </span>
+                          <span
+                            style="
+                              font-size: 11px;
+                              padding: 2px 8px;
+                              background: {{ badge_bg }};
+                              color: {{ badge_color }};
+                              border-radius: 12px;
+                            "
+                          >
+                            {{ badge_text }}
+                          </span>
+                        </div>
+
+                        {% if milestone.description %}
+                          <p style="margin: 5px 0 0 0; font-size: 12px; color: #6c757d;">
+                            {{ milestone.description }}
+                          </p>
+                        {% endif %}
+
+                        <!-- Progress bar for unreached milestones -->
+                        {% if is_reached == false %}
+                          {% assign current_raised = campaign.raisedAmount | times: 1.0 %}
+                          {% assign milestone_progress = current_raised | divided_by: milestone_amount | times: 100 %}
+                          {% if milestone_progress > 100 %}{% assign milestone_progress = 100 %}{% endif %}
+
+                          <div style="margin-top: 8px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-bottom: 2px;">
+                              <span>Progress to this milestone</span>
+                              <span>{{ milestone_progress | round }}%</span>
+                            </div>
+                            <div style="height: 4px; background: #e9ecef; border-radius: 2px; overflow: hidden;">
+                              <div
+                                style="height: 100%; width: {{ milestone_progress }}%; background: #ffc107; border-radius: 2px;"
+                              ></div>
+                            </div>
+                          </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <!-- TIME REMAINING SECTION -->
+            {% if campaign.endDate %}
+              {% assign end_date = campaign.endDate | date: '%s' %}
+              {% assign now = 'now' | date: '%s' %}
+              {% assign seconds_left = end_date | minus: now %}
+              {% assign days_left = seconds_left | divided_by: 86400 | round %}
+
+              <div class="pledgepop-timer-container {% if days_left <= 0 %}ended{% endif %}">
+                <div class="pledgepop-timer-icon">
+                  {% if days_left > 0 %}⏰{% else %}⏳{% endif %}
+                </div>
+                <div class="pledgepop-timer-content">
+                  <div class="pledgepop-timer-label">
+                    {% if days_left > 0 %}Time Remaining{% else %}Campaign Ended{% endif %}
+                  </div>
+                  <div class="pledgepop-timer-value">
+                    {% if days_left > 0 %}
+                      <strong>{{ days_left }}</strong> days
+                    {% else %}
+                      Ended on {{ campaign.endDate | date: '%b %d, %Y' }}
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+          {% endif %}
+
+          <!-- ============================================= -->
+          <!-- SELLING PLAN SELECTOR (only for pledge mode) -->
+          <!-- ============================================= -->
+          {% if campaign.campaignMode == 'pledge'
+            and campaign.sellingPlanGroupId
+            and campaign.sellingPlanIds.size > 0
+          %}
+            <div
+              class="pledge-selling-plan-section"
+              style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;"
+            >
+              <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 16px; margin-right: 8px;">📅</span>
+                <h4 style="margin: 0; font-size: 16px; color: #333;">Pledge Options</h4>
+              </div>
+
+              <select
+                id="pledge-selling-plan-{{ product.id }}"
+                class="pledge-selling-plan"
+                <!--
+                This
+                class
+                must
+                match
+                --
+              >
+                >
+                <option value="">One-time pledge (pay now)</option>
+                {% for plan in campaign.sellingPlanIds %}
+                  <option value="{{ plan.id }}">{{ plan.name }}</option>
+                {% endfor %}
+              </select>
+              <p style="font-size: 12px; color: #6c757d; margin: 5px 0 0 0;">
+                <span style="color: #059669;">✓</span> Select how you want to pledge. Subscription options will be
+                managed by Shopify.
+              </p>
+            </div>
+          {% endif %}
+          <!-- CTA Button -->
+          <button
+            type="button"
+            class="pledgepop-cta pledgepop-cta-{{ campaign.campaignMode }}"
+            data-product-id="{{ product.id }}"
+            data-variant-id="{{ product.selected_or_first_available_variant.id }}"
+            data-mode="{{ campaign.campaignMode }}"
+            data-pledge="{{ campaign.basePledge }}"
+            data-product-title="{{ product.title | escape }}"
+            data-product-image="{{ product.featured_image | image_url: width: 100 }}"
+            data-campaign-id="{{ campaign.id }}"
+            data-addons="{{ campaign.addons | json | escape }}"
+          >
+            {% if campaign.campaignMode == 'pledge' %}
+              Pledge ${{ campaign.basePledge }} Now
+            {% else %}
+              Buy Now - {{ product.price | money }}
+            {% endif %}
+          </button>
+
+          <!-- Secure badge -->
+          <div class="pledgepop-footer">
+            <span>🔒 Secure checkout</span>
+            <span>⚡ 100% money back guarantee</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENHANCED STYLES -->
+      <style>
+                .pledgepop-campaign-wrapper {
+                  margin: {{ block.settings.margin_top | default: 20 }}px 0 {{ block.settings.margin_bottom | default: 20 }}px;
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                }
+
+                .pledgepop-campaign {
+                  padding: 24px;
+                  border: 1px solid #eaeaea;
+                  border-radius: 12px;
+                  background: white;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                  transition: box-shadow 0.2s;
+                }
+
+                .pledgepop-campaign:hover {
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                }
+
+                .pledgepop-header {
+                  margin-bottom: 16px;
+                }
+
+                .pledgepop-badge {
+                  display: inline-block;
+                  padding: 4px 12px;
+                  border-radius: 20px;
+                  font-size: 12px;
+                  font-weight: 600;
+                  letter-spacing: 0.3px;
+                  margin-bottom: 10px;
+                }
+
+                .pledgepop-badge-pledge {
+                  background: #fef3e2;
+                  color: #b45b0a;
+                  border: 1px solid #f9d9b3;
+                }
+
+                .pledgepop-badge-full_price {
+                  background: #e3f2fd;
+                  color: #0d47a1;
+                  border: 1px solid #bbdefb;
+                }
+
+                .pledgepop-title {
+                  margin: 0;
+                  font-size: 18px;
+                  font-weight: 600;
+                  color: #1a1a1a;
+                }
+
+                .pledgepop-pricing {
+                  display: flex;
+                  justify-content: space-between;
+                  padding: 16px 0;
+                  border-top: 1px solid #eaeaea;
+                  border-bottom: 1px solid #eaeaea;
+                  margin-bottom: 16px;
+                }
+
+                .pledgepop-price-box {
+                  flex: 1;
+                }
+
+                .pledgepop-label {
+                  font-size: 12px;
+                  color: #6b7280;
+                  display: block;
+                  margin-bottom: 4px;
+                }
+
+                .pledgepop-price-original {
+                  font-size: 18px;
+                  font-weight: 600;
+                  color: #9ca3af;
+                  text-decoration: line-through;
+                }
+
+                .pledgepop-price-pledge {
+                  font-size: 24px;
+                  font-weight: 700;
+                  color: #059669;
+                }
+
+                .pledgepop-backers {
+                  font-size: 14px;
+                  color: #4b5563;
+                  margin-bottom: 8px;
+                }
+
+                .pledgepop-backers-count {
+                  font-weight: 700;
+                  color: #1f2937;
+                  font-size: 16px;
+                }
+
+                .pledgepop-progress-container {
+                  margin-bottom: 20px;
+                }
+
+                .pledgepop-progress-bar {
+                  height: 8px;
+                  background: #e5e7eb;
+                  border-radius: 4px;
+                  overflow: hidden;
+                  margin-bottom: 8px;
+                }
+
+                .pledgepop-progress-fill {
+                  height: 100%;
+                  background: {{ block.settings.primary_color | default: '#059669' }};
+                  border-radius: 4px;
+                  transition: width 0.3s ease;
+                }
+
+                .pledgepop-progress-stats {
+                  display: flex;
+                  justify-content: space-between;
+                  font-size: 14px;
+                  color: #4b5563;
+                  margin-bottom: 4px;
+                }
+
+                .pledgepop-target {
+                  font-size: 13px;
+                  color: #6b7280;
+                }
+
+                .pledgepop-timer-container {
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  padding: 12px;
+                  background: #eff6ff;
+                  border-radius: 8px;
+                  margin-bottom: 16px;
+                  border: 1px solid #dbeafe;
+                }
+
+                .pledgepop-timer-container.ended {
+                  background: #fef2f2;
+                  border-color: #fecaca;
+                }
+
+                .pledgepop-timer-icon {
+                  font-size: 24px;
+                }
+
+                .pledgepop-timer-content {
+                  flex: 1;
+                }
+
+                .pledgepop-timer-label {
+                  font-size: 12px;
+                  color: #1e40af;
+                  margin-bottom: 2px;
+                }
+
+                .pledgepop-timer-container.ended .pledgepop-timer-label {
+                  color: #991b1b;
+                }
+
+                .pledgepop-timer-value {
+                  font-size: 16px;
+                  font-weight: 600;
+                  color: #1e3a8a;
+                }
+
+                .pledgepop-timer-container.ended .pledgepop-timer-value {
+                  color: #b91c1c;
+                }
+
+                .pledgepop-cta {
+                  width: 100%;
+                  padding: 14px;
+                  border: none;
+                  border-radius: 8px;
+                  font-size: 16px;
+                  font-weight: 600;
+                  cursor: pointer;
+                  transition: all 0.2s;
+                  margin-bottom: 12px;
+                }
+
+                .pledgepop-cta-pledge {
+                  background: #059669;
+                  color: white;
+                }
+
+                .pledgepop-cta-pledge:hover {
+                  background: #047857;
+                }
+
+                .pledgepop-cta-full_price {
+                  background: #2563eb;
+                  color: white;
+                }
+
+                .pledgepop-cta-full_price:hover {
+                  background: #1d4ed8;
+                }
+
+                .pledgepop-footer {
+                  display: flex;
+                  justify-content: space-between;
+                  font-size: 12px;
+                  color: #9ca3af;
+                  padding-top: 8px;
+                  border-top: 1px solid #f3f4f6;
+                }
+
+                /* Milestones Styling */
+                .pledgepop-milestones {
+                  margin-top: 20px;
+                  padding-top: 15px;
+                  border-top: 1px solid #eaeaea;
+                }
+
+                .pledgepop-milestone {
+                  transition: all 0.2s ease;
+                }
+
+                .pledgepop-milestone:hover {
+                  transform: translateX(2px);
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                }
+
+                /* Progress colors */
+                .pledgepop-milestone-progress {
+                  font-size: 11px;
+                  color: #6c757d;
+                }
+
+                /* Modal Styles */
+                .pledgepop-modal-overlay {
+                  position: fixed;
+                  top: 0;
+                  left: 0;
+                  right: 0;
+                  bottom: 0;
+                  background: rgba(0, 0, 0, 0.5);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  z-index: 999999;
+                  padding: 20px;
+                }
+
+                .pledgepop-modal {
+                  background: white;
+                  border-radius: 12px;
+                  max-width: 500px;
+                  width: 100%;
+                  max-height: 90vh;
+                  overflow-y: auto;
+                  position: relative;
+                  padding: 30px;
+                  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                  animation: slideUp 0.3s ease;
+                }
+
+                @keyframes slideUp {
+                  from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                  }
+                  to {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+                }
+
+                .pledgepop-modal-close {
+                  position: absolute;
+                  top: 15px;
+                  right: 15px;
+                  background: none;
+                  border: none;
+                  font-size: 20px;
+                  cursor: pointer;
+                  color: #6c757d;
+                  width: 30px;
+                  height: 30px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  border-radius: 50%;
+                  transition: background 0.2s;
+                }
+
+                .pledgepop-modal-close:hover {
+                  background: #f8f9fa;
+                  color: #333;
+                }
+
+                .pledgepop-modal-title {
+                  margin: 0 0 20px 0;
+                  font-size: 20px;
+                  color: #333;
+                  padding-right: 20px;
+                }
+
+                .pledgepop-main-product {
+                  display: flex;
+                  gap: 15px;
+                  padding: 15px;
+                  background: #f8f9fa;
+                  border-radius: 8px;
+                  margin-bottom: 20px;
+                }
+
+                .pledgepop-main-product img {
+                  width: 60px;
+                  height: 60px;
+                  object-fit: cover;
+                  border-radius: 6px;
+                }
+
+                .pledgepop-main-product-details {
+                  flex: 1;
+                }
+
+                .pledgepop-main-product-title {
+                  font-weight: 600;
+                  margin-bottom: 5px;
+                }
+
+                .pledgepop-main-product-price {
+                  color: #059669;
+                  font-weight: 600;
+                }
+
+                .pledgepop-addons-section {
+                  margin-bottom: 20px;
+                }
+
+                .pledgepop-addons-title {
+                  font-size: 16px;
+                  margin: 0 0 15px 0;
+                  color: #333;
+                }
+
+                .pledgepop-addons-grid {
+                  display: flex;
+                  flex-direction: column;
+                  gap: 10px;
+                }
+
+                .pledgepop-addon-item {
+                  display: flex;
+                  align-items: flex-start;
+                  gap: 12px;
+                  padding: 12px;
+                  border: 1px solid #e9ecef;
+                  border-radius: 8px;
+                  cursor: pointer;
+                  transition: all 0.2s;
+                }
+
+                .pledgepop-addon-item:hover {
+                  border-color: #059669;
+                  background: #f8f9fa;
+                }
+
+                .pledgepop-addon-checkbox {
+                  margin-top: 3px;
+                  width: 18px;
+                  height: 18px;
+                  cursor: pointer;
+                }
+
+                .pledgepop-addon-content {
+                  flex: 1;
+                }
+
+                .pledgepop-addon-name {
+                  font-weight: 500;
+                  display: block;
+                  margin-bottom: 3px;
+                }
+
+                .pledgepop-addon-price {
+                  color: #059669;
+                  font-weight: 600;
+                  font-size: 14px;
+                  display: block;
+                  margin-bottom: 3px;
+                }
+
+                .pledgepop-addon-description {
+                  font-size: 12px;
+                  color: #6c757d;
+                  display: block;
+                }
+
+                .pledgepop-summary {
+                  background: #f8f9fa;
+                  padding: 15px;
+                  border-radius: 8px;
+                  margin-bottom: 20px;
+                }
+
+                .pledgepop-summary-title {
+                  font-size: 16px;
+                  margin: 0 0 15px 0;
+                  color: #333;
+                }
+
+                .pledgepop-summary-row {
+                  display: flex;
+                  justify-content: space-between;
+                  margin-bottom: 10px;
+                  font-size: 14px;
+                  color: #495057;
+                }
+
+                .pledgepop-summary-total {
+                  display: flex;
+                  justify-content: space-between;
+                  margin-top: 15px;
+                  padding-top: 15px;
+                  border-top: 2px solid #dee2e6;
+                  font-weight: bold;
+                  font-size: 16px;
+                  color: #333;
+                }
+
+                .pledgepop-checkout-btn {
+                  width: 100%;
+                  padding: 14px;
+                  background: #059669;
+                  color: white;
+                  border: none;
+                  border-radius: 8px;
+                  font-size: 16px;
+                  font-weight: 600;
+                  cursor: pointer;
+                  transition: background 0.2s;
+                }
+
+                .pledgepop-checkout-btn:hover {
+                  background: #047857;
+                }
+                /* Selling Plan Selector Styles */
+        .pledge-selling-plan-section {
+          transition: all 0.2s ease;
+        }
+
+        .pledge-selling-plan-section:hover {
+          border-color: #059669;
+          box-shadow: 0 2px 8px rgba(5, 150, 105, 0.1);
+        }
+
+        .pledge-selling-plan {
+          cursor: pointer;
+          appearance: none;
+          background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23333%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+          background-repeat: no-repeat;
+          background-position: right 12px center;
+          background-size: 16px;
+          padding-right: 40px;
+        }
+
+        .pledge-selling-plan:hover {
+          border-color: #059669;
+        }
+
+        .pledge-selling-plan:focus {
+          outline: none;
+          border-color: #059669;
+          box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        }
+      </style>
+    {% endif %}
+  {% endif %}
+{% endif %}
+
+<script>
+  {% assign is_myshopify = false %}
+  {% if request.origin contains 'myshopify.com' or shop.url contains 'myshopify.com' %}
+    {% assign is_myshopify = true %}
+  {% endif %}
+
+  window.APP_CONFIG = {
+    apiBaseUrl: '{{ request.origin | default: shop.url }}/apps/testing-app-1209',
+    isStoreDomain: {{ is_myshopify | json }},
+    appVersion: '1.0.0'
+  };
+</script>
+
+
+<!-- Load campaign.js -->
+<script src="{{ 'campaign.js' | asset_url }}" defer></script>
+<!-- Comment Bubble Assets -->
+{{ 'comment-bubble.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'comment-bubble.js' | asset_url }}" defer></script>
+
+<!-- Add product ID meta tag for JavaScript -->
+{% if product %}
+  <meta name="product-id" content="{{ product.id }}">
+  <meta name="product-handle" content="{{ product.handle }}">
+{% endif %}
+
+{% schema %}
+{
+  "name": "PledgePop Campaign",
+  "target": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enabled",
+      "label": "Enable campaign widget",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Display Settings"
+    },
+    {
+      "type": "number",
+      "id": "margin_top",
+      "label": "Margin top (px)",
+      "default": 20
+    },
+    {
+      "type": "number",
+      "id": "margin_bottom",
+      "label": "Margin bottom (px)",
+      "default": 20
+    },
+    {
+      "type": "color",
+      "id": "primary_color",
+      "label": "Primary color",
+      "default": "#059669"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,13 @@
+name = "Usama_theme"
+type = "theme"
+uid = "a798741f-f371-5bf6-15a9-5db0650954c185092a97"
+
+
+[[extensions]]
+type = "theme"
+name = "PledgePop Campaign Widget"
+handle = "pledgepop-campaign"
+
+[[extensions.blocks]]
+type = "campaign-preview"
+name = "Campaign Preview"
